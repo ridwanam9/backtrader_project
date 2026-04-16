@@ -1,7 +1,5 @@
 import backtrader as bt
 import pandas as pd
-import yfinance as yf
-
 
 class SMAStrategy(bt.Strategy):
     def __init__(self):
@@ -10,27 +8,25 @@ class SMAStrategy(bt.Strategy):
 
     def next(self):
         if not self.position:
-            if self.sma_fast > self.sma_slow:
+            if self.sma_fast[0] > self.sma_slow[0]:
+                print("BUY")
                 self.buy()
         else:
-            if self.sma_fast < self.sma_slow:
+            if self.sma_fast[0] < self.sma_slow[0]:
+                print("SELL")
                 self.sell()
 
 # engine
 cerebro = bt.Cerebro()
 cerebro.addstrategy(SMAStrategy)
 
-# 🔥 load pakai pandas
+# load data
 df = pd.read_csv("data.csv", skiprows=3)
 
-# rename kolom biar sesuai
 df.columns = ['date', 'close', 'high', 'low', 'open', 'volume']
-
-# ubah ke datetime
 df['date'] = pd.to_datetime(df['date'])
 df.set_index('date', inplace=True)
 
-# pastikan numeric
 for col in ['open', 'high', 'low', 'close', 'volume']:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
@@ -38,3 +34,20 @@ df.dropna(inplace=True)
 
 print(df.head())
 print(df.dtypes)
+
+# 🔥 WAJIB: masuk ke backtrader
+data = bt.feeds.PandasData(dataname=df)
+cerebro.adddata(data)
+
+# modal
+cerebro.broker.setcash(10000)
+
+print("Modal awal:", cerebro.broker.getvalue())
+
+# run
+cerebro.run()
+
+print("Modal akhir:", cerebro.broker.getvalue())
+
+# chart
+cerebro.plot(style='candlestick')
